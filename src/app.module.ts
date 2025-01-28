@@ -3,6 +3,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
     imports: [
@@ -22,6 +23,7 @@ import { ConfigModule } from '@nestjs/config';
             autoLoadEntities: true,
             synchronize: true, //Sincroniza los cambios a las entidades automaticamente en la db
         }),
+        TasksModule,
     ],
     controllers: [AppController],
     providers: [AppService],
