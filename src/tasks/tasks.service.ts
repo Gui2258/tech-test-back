@@ -1,26 +1,83 @@
-import { Injectable } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import {
+    BadRequestException,
+    Injectable,
+    InternalServerErrorException,
+    NotFoundException,
+} from '@nestjs/common';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Task } from './entities/task.entity';
+import { isUUID } from 'class-validator';
 
 @Injectable()
 export class TasksService {
-    create(createTaskDto: CreateTaskDto) {
-        return 'This action adds a new task';
+    constructor(
+        @InjectRepository(Task)
+        private readonly taskRepository: Repository<Task>
+    ) {}
+    async create(createTaskDto: CreateTaskDto) {
+        console.log('Creating task');
+        const { content } = createTaskDto;
+        try {
+            const task = this.taskRepository.create({
+                content: content,
+            });
+
+            await this.taskRepository.save(task);
+
+            return task;
+        } catch (error) {
+            this.handleDBExceptions(error);
+        }
     }
 
     findAll() {
-        return `This action returns all tasks`;
+        return this.taskRepository.find({
+            where: { isDeleted: false },
+            // relations: ['categoria'],
+        });
     }
 
-    findOne(id: number) {
-        return `This action returns a #${id} task`;
+    async findOne(id: string) {
+        let task: Task | null;
+        if (isUUID(id)) {
+            task = await this.taskRepository.findOne({
+                where: { id: id, isDeleted: false },
+            });
+        } else {
+            task = await this.taskRepository.findOne({
+                where: { id: id, isDeleted: false },
+            });
+        }
+
+        if (!task) throw new NotFoundException(`Product with ${id} not found`);
+
+        return task;
     }
 
     update(id: number, updateTaskDto: UpdateTaskDto) {
         return `This action updates a #${id} task`;
     }
 
-    remove(id: number) {
-        return `This action removes a #${id} task`;
+    async remove(id: string) {
+        const task = await this.findOne(id);
+        task.isDeleted = true;
+        await this.taskRepository.save(task);
+        return { message: 'Product marked as deleted successfully' };
+    }
+
+    private handleDBExceptions(error: any) {
+        if (error.code === '23505') throw new BadRequestException(error.detail);
+        if (error.status === 404)
+            throw new BadRequestException('Category not found');
+
+        console.error(error);
+        throw new InternalServerErrorException(
+            'Unexpected error, check server logs'
+        );
     }
 }
