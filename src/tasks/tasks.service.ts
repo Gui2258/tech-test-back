@@ -59,8 +59,16 @@ export class TasksService {
         return task;
     }
 
-    update(id: number, updateTaskDto: UpdateTaskDto) {
-        return `This action updates a #${id} task`;
+    async update(id: string, updateTaskDto: UpdateTaskDto) {
+        const task = await this.findOne(id);
+
+        const updatedCategory = Object.assign(task, updateTaskDto);
+        try {
+            await this.taskRepository.save(updatedCategory);
+            return updatedCategory;
+        } catch (error) {
+            this.handleDBExceptions(error);
+        }
     }
 
     async remove(id: string) {
