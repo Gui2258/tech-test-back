@@ -24,4 +24,4 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api/swagger', app, document);
 }
-bootstrap();
+void bootstrap();
