@@ -75,9 +75,15 @@ export class TasksService {
         return { message: 'Product marked as deleted successfully' };
     }
 
-    async toggleStatus(id: string) {
+    async setStatus(id: string) {
         const task = await this.findOne(id);
-        task.checkDone = !task.checkDone;
+        task.checkDone = true;
+        await this.taskRepository.save(task);
+        return task;
+    }
+    async unsetStatus(id: string) {
+        const task = await this.findOne(id);
+        task.checkDone = false;
         await this.taskRepository.save(task);
         return task;
     }

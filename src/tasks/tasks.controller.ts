@@ -25,9 +25,13 @@ export class TasksController {
         return this.tasksService.findAll();
     }
 
-    @Get(':id')
-    toggleStatus(@Param('id') id: string) {
-        return this.tasksService.toggleStatus(id);
+    @Get(':id/set')
+    setStatus(@Param('id') id: string) {
+        return this.tasksService.setStatus(id);
+    }
+    @Get(':id/unset')
+    unsetStatus(@Param('id') id: string) {
+        return this.tasksService.unsetStatus(id);
     }
 
     @Get(':id')
