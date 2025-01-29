@@ -3,10 +3,19 @@ import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { Task } from './entities/task.entity';
 
 describe('TasksController', () => {
     let controller: TasksController;
     let service: TasksService;
+
+    const mockTasksService = {
+        create: jest.fn(),
+        findAll: jest.fn(),
+        findOne: jest.fn(),
+        update: jest.fn(),
+        remove: jest.fn(),
+    };
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -14,13 +23,7 @@ describe('TasksController', () => {
             providers: [
                 {
                     provide: TasksService,
-                    useValue: {
-                        create: jest.fn(),
-                        findAll: jest.fn(),
-                        findOne: jest.fn(),
-                        update: jest.fn(),
-                        remove: jest.fn(),
-                    },
+                    useValue: mockTasksService,
                 },
             ],
         }).compile();
@@ -34,79 +37,106 @@ describe('TasksController', () => {
     });
 
     describe('create', () => {
-        it('should create a task', async () => {
+        it('should create a new task', async () => {
             const createTaskDto: CreateTaskDto = {
-                title: 'Test task',
-                description: 'Test description',
+                content: 'Test Task',
             };
-            const result = { id: '1', ...createTaskDto };
-            jest.spyOn(service, 'create').mockImplementation(
-                async () => result
-            );
 
-            expect(await controller.create(createTaskDto)).toBe(result);
+            const expectedResult: Task = {
+                checkDone: false,
+                isDeleted: false,
+                id: '1',
+                ...createTaskDto,
+            };
+
+            mockTasksService.create.mockResolvedValue(expectedResult);
+
+            const result = await controller.create(createTaskDto);
+            expect(result).toEqual(expectedResult);
+            expect(mockTasksService.create).toHaveBeenCalledWith(createTaskDto);
         });
     });
 
     describe('findAll', () => {
         it('should return an array of tasks', async () => {
-            const result = [
+            const expectedTasks: Task[] = [
                 {
                     id: '1',
-                    title: 'Test task',
-                    description: 'Test description',
+                    content: 'Task 1',
+                    checkDone: false,
+                    isDeleted: false,
                 },
             ];
-            jest.spyOn(service, 'findAll').mockImplementation(
-                async () => result
-            );
 
-            expect(await controller.findAll()).toBe(result);
+            mockTasksService.findAll.mockResolvedValue(expectedTasks);
+
+            const result = await controller.findAll();
+            expect(result).toEqual(expectedTasks);
+            expect(mockTasksService.findAll).toHaveBeenCalled();
         });
     });
 
     describe('findOne', () => {
         it('should return a single task', async () => {
-            const result = {
-                id: '1',
-                title: 'Test task',
-                description: 'Test description',
+            const taskId = '1';
+            const expectedTask: Task = {
+                id: taskId,
+                content: 'Task 1',
+                checkDone: false,
+                isDeleted: false,
             };
-            jest.spyOn(service, 'findOne').mockImplementation(
-                async () => result
-            );
 
-            expect(await controller.findOne('1')).toBe(result);
+            mockTasksService.findOne.mockResolvedValue(expectedTask);
+
+            const result = await controller.findOne(taskId);
+            expect(result).toEqual(expectedTask);
+            expect(mockTasksService.findOne).toHaveBeenCalledWith(taskId);
+        });
+
+        it('should handle not found task', async () => {
+            const taskId = '999';
+            mockTasksService.findOne.mockResolvedValue(null);
+
+            const result = await controller.findOne(taskId);
+            expect(result).toBeNull();
         });
     });
 
     describe('update', () => {
         it('should update a task', async () => {
+            const taskId = '1';
             const updateTaskDto: UpdateTaskDto = {
-                title: 'Updated task',
-                description: 'Updated description',
+                content: 'Updated Task',
             };
-            const result = { id: '1', ...updateTaskDto };
-            jest.spyOn(service, 'update').mockImplementation(
-                async () => result
-            );
 
-            expect(await controller.update('1', updateTaskDto)).toBe(result);
+            const expectedResult: Task = {
+                id: taskId,
+                content: 'Updated Task',
+                checkDone: false,
+                isDeleted: false,
+            };
+
+            mockTasksService.update.mockResolvedValue(expectedResult);
+
+            const result = await controller.update(taskId, updateTaskDto);
+            expect(result).toEqual(expectedResult);
+            expect(mockTasksService.update).toHaveBeenCalledWith(
+                taskId,
+                updateTaskDto
+            );
         });
     });
 
     describe('remove', () => {
         it('should remove a task', async () => {
-            const result = {
-                id: '1',
-                title: 'Test task',
-                description: 'Test description',
-            };
-            jest.spyOn(service, 'remove').mockImplementation(
-                async () => result
-            );
+            const taskId = '1';
+            const expectedResult = { deleted: true };
 
-            expect(await controller.remove('1')).toBe(result);
+            mockTasksService.remove.mockResolvedValue(expectedResult);
+
+            const result = await controller.remove(taskId);
+            expect(result).toEqual(expectedResult);
+            expect(mockTasksService.remove).toHaveBeenCalledWith(taskId);
         });
     });
 });
