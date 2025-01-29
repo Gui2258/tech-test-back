@@ -48,9 +48,7 @@ export class TasksService {
                 where: { id: id, isDeleted: false },
             });
         } else {
-            task = await this.taskRepository.findOne({
-                where: { id: id, isDeleted: false },
-            });
+            throw new BadRequestException(`Invalid UUID: ${id}`);
         }
 
         if (!task) throw new NotFoundException(`Product with ${id} not found`);
@@ -75,6 +73,13 @@ export class TasksService {
         task.isDeleted = true;
         await this.taskRepository.save(task);
         return { message: 'Product marked as deleted successfully' };
+    }
+
+    async toggleStatus(id: string) {
+        const task = await this.findOne(id);
+        task.checkDone = !task.checkDone;
+        await this.taskRepository.save(task);
+        return task;
     }
 
     private handleDBExceptions(error: any) {
