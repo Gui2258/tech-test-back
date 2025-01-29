@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
     BadRequestException,
@@ -82,8 +81,8 @@ export class TasksService {
         if (error.code === '23505') throw new BadRequestException(error.detail);
         if (error.status === 404)
             throw new BadRequestException('Category not found');
-
-        console.error(error);
+        if (error.status === 400)
+            throw new BadRequestException('Solicitud incorrecta');
         throw new InternalServerErrorException(
             'Unexpected error, check server logs'
         );
