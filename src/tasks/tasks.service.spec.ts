@@ -60,7 +60,7 @@ describe('TasksService', () => {
         it('should return an array of tasks', async () => {
             const tasks = [{ id: '1', content: 'Test task' }];
 
-            jest.spyOn(repository, 'find').mockResolvedValue(tasks as any);
+            jest.spyOn(repository, 'find').mockResolvedValue(tasks as Task[]);
 
             expect(await service.findAll()).toEqual(tasks);
         });
@@ -70,7 +70,7 @@ describe('TasksService', () => {
         it('should return a task', async () => {
             const task = { id: '1', content: 'Test task' };
 
-            jest.spyOn(repository, 'findOne').mockResolvedValue(task as any);
+            jest.spyOn(repository, 'findOne').mockResolvedValue(task as Task);
 
             expect(await service.findOne('1')).toEqual(task);
         });
@@ -89,11 +89,11 @@ describe('TasksService', () => {
             const updateTaskDto: UpdateTaskDto = { content: 'Updated task' };
             const task = { id: '1', content: 'Test task' };
 
-            jest.spyOn(service, 'findOne').mockResolvedValue(task as any);
+            jest.spyOn(service, 'findOne').mockResolvedValue(task as Task);
             jest.spyOn(repository, 'save').mockResolvedValue({
                 ...task,
                 ...updateTaskDto,
-            } as any);
+            } as Task);
 
             expect(await service.update('1', updateTaskDto)).toEqual({
                 ...task,
@@ -105,7 +105,7 @@ describe('TasksService', () => {
             const updateTaskDto: UpdateTaskDto = { content: 'Updated task' };
             const task = { id: '1', content: 'Test task' };
 
-            jest.spyOn(service, 'findOne').mockResolvedValue(task as any);
+            jest.spyOn(service, 'findOne').mockResolvedValue(task as Task);
             jest.spyOn(repository, 'save').mockRejectedValue({ code: '23505' });
 
             await expect(service.update('1', updateTaskDto)).rejects.toThrow(
@@ -118,11 +118,11 @@ describe('TasksService', () => {
         it('should mark a task as deleted', async () => {
             const task = { id: '1', content: 'Test task', isDeleted: false };
 
-            jest.spyOn(service, 'findOne').mockResolvedValue(task as any);
+            jest.spyOn(service, 'findOne').mockResolvedValue(task as Task);
             jest.spyOn(repository, 'save').mockResolvedValue({
                 ...task,
                 isDeleted: true,
-            } as any);
+            } as Task);
 
             expect(await service.remove('1')).toEqual({
                 message: 'Product marked as deleted successfully',
