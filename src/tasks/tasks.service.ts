@@ -24,6 +24,8 @@ export class TasksService {
         try {
             const task = this.taskRepository.create({
                 content: content,
+                createdAt: new Date(),
+                updatedAt: new Date(),
             });
 
             await this.taskRepository.save(task);
@@ -37,7 +39,9 @@ export class TasksService {
     findAll() {
         return this.taskRepository.find({
             where: { isDeleted: false },
-            // relations: ['categoria'],
+            order: {
+                createdAt: 'DESC',
+            },
         });
     }
 
@@ -59,10 +63,14 @@ export class TasksService {
     async update(id: string, updateTaskDto: UpdateTaskDto) {
         const task = await this.findOne(id);
 
-        const updatedCategory = Object.assign(task, updateTaskDto);
+        const updatedTask = Object.assign(task, {
+            ...updateTaskDto,
+            updatedAt: new Date(),
+        });
+
         try {
-            await this.taskRepository.save(updatedCategory);
-            return updatedCategory;
+            await this.taskRepository.save(updatedTask);
+            return updatedTask;
         } catch (error) {
             this.handleDBExceptions(error);
         }
@@ -71,6 +79,7 @@ export class TasksService {
     async remove(id: string) {
         const task = await this.findOne(id);
         task.isDeleted = true;
+        task.updatedAt = new Date();
         await this.taskRepository.save(task);
         return { message: 'Product marked as deleted successfully' };
     }
@@ -78,12 +87,15 @@ export class TasksService {
     async setStatus(id: string) {
         const task = await this.findOne(id);
         task.checkDone = true;
+        task.updatedAt = new Date();
         await this.taskRepository.save(task);
         return task;
     }
+
     async unsetStatus(id: string) {
         const task = await this.findOne(id);
         task.checkDone = false;
+        task.updatedAt = new Date();
         await this.taskRepository.save(task);
         return task;
     }
