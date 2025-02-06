@@ -38,7 +38,7 @@ export class TasksService {
 
     findAll() {
         return this.taskRepository.find({
-            where: { isDeleted: false },
+            where: { checkDone: false, isDeleted: false },
             order: {
                 createdAt: 'DESC',
             },

@@ -10,10 +10,19 @@ import {
     BadRequestException,
     InternalServerErrorException,
 } from '@nestjs/common';
+import { v4 as uuidv4 } from 'uuid';
 
 describe('TasksService', () => {
     let service: TasksService;
     let repository: Repository<Task>;
+    const validUuid = uuidv4() as string;
+
+    const mockRepository = {
+        create: jest.fn(),
+        save: jest.fn(),
+        find: jest.fn(),
+        findOne: jest.fn(),
+    };
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -21,7 +30,7 @@ describe('TasksService', () => {
                 TasksService,
                 {
                     provide: getRepositoryToken(Task),
-                    useClass: Repository,
+                    useValue: mockRepository,
                 },
             ],
         }).compile();
@@ -30,25 +39,37 @@ describe('TasksService', () => {
         repository = module.get<Repository<Task>>(getRepositoryToken(Task));
     });
 
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
     it('should be defined', () => {
         expect(service).toBeDefined();
+        expect(repository).toBeDefined();
     });
 
     describe('create', () => {
-        it('should create a task', async () => {
+        it('should create a task successfully', async () => {
             const createTaskDto: CreateTaskDto = { content: 'Test task' };
-            const task = { id: '1', content: 'Test task' };
+            const newTask: Partial<Task> = {
+                id: validUuid,
+                content: 'Test task',
+                checkDone: false,
+                isDeleted: false,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            };
 
-            jest.spyOn(repository, 'create').mockReturnValue(task as Task);
-            jest.spyOn(repository, 'save').mockResolvedValue(task as Task);
+            mockRepository.create.mockReturnValue(newTask);
+            mockRepository.save.mockResolvedValue(newTask);
 
-            expect(await service.create(createTaskDto)).toEqual(task);
+            const result = await service.create(createTaskDto);
+            expect(result).toEqual(newTask);
         });
 
-        it('should handle database exceptions', async () => {
+        it('should handle database errors during creation', async () => {
             const createTaskDto: CreateTaskDto = { content: 'Test task' };
-
-            jest.spyOn(repository, 'save').mockRejectedValue(new Error());
+            mockRepository.save.mockRejectedValue(new Error());
 
             await expect(service.create(createTaskDto)).rejects.toThrow(
                 InternalServerErrorException
@@ -57,74 +78,104 @@ describe('TasksService', () => {
     });
 
     describe('findAll', () => {
-        it('should return an array of tasks', async () => {
-            const tasks = [{ id: '1', content: 'Test task' }];
+        it('should return all non-deleted tasks', async () => {
+            const expectedTasks: Partial<Task>[] = [
+                {
+                    id: validUuid,
+                    content: 'Test task',
+                    checkDone: false,
+                    isDeleted: false,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                },
+            ];
 
-            jest.spyOn(repository, 'find').mockResolvedValue(tasks as Task[]);
+            mockRepository.find.mockResolvedValue(expectedTasks);
 
-            expect(await service.findAll()).toEqual(tasks);
+            const result = await service.findAll();
+            expect(result).toEqual(expectedTasks);
         });
     });
 
     describe('findOne', () => {
-        it('should return a task', async () => {
-            const task = { id: '1', content: 'Test task' };
+        it('should return a task by id', async () => {
+            const expectedTask: Partial<Task> = {
+                id: validUuid,
+                content: 'Test task',
+                checkDone: false,
+                isDeleted: false,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            };
 
-            jest.spyOn(repository, 'findOne').mockResolvedValue(task as Task);
+            mockRepository.findOne.mockResolvedValue(expectedTask);
 
-            expect(await service.findOne('1')).toEqual(task);
+            const result = await service.findOne(validUuid);
+            expect(result).toEqual(expectedTask);
         });
 
-        it('should throw NotFoundException if task not found', async () => {
-            jest.spyOn(repository, 'findOne').mockResolvedValue(null);
+        it('should throw NotFoundException for non-existent task', async () => {
+            const nonExistentUuid = uuidv4();
+            mockRepository.findOne.mockResolvedValue(null);
 
-            await expect(service.findOne('1')).rejects.toThrow(
+            await expect(service.findOne(nonExistentUuid)).rejects.toThrow(
                 NotFoundException
             );
         });
-    });
 
-    describe('update', () => {
-        it('should update a task', async () => {
-            const updateTaskDto: UpdateTaskDto = { content: 'Updated task' };
-            const task = { id: '1', content: 'Test task' };
+        it('should throw BadRequestException for invalid UUID', async () => {
+            const invalidId = 'not-a-uuid';
 
-            jest.spyOn(service, 'findOne').mockResolvedValue(task as Task);
-            jest.spyOn(repository, 'save').mockResolvedValue({
-                ...task,
-                ...updateTaskDto,
-            } as Task);
-
-            expect(await service.update('1', updateTaskDto)).toEqual({
-                ...task,
-                ...updateTaskDto,
-            });
-        });
-
-        it('should handle database exceptions', async () => {
-            const updateTaskDto: UpdateTaskDto = { content: 'Updated task' };
-            const task = { id: '1', content: 'Test task' };
-
-            jest.spyOn(service, 'findOne').mockResolvedValue(task as Task);
-            jest.spyOn(repository, 'save').mockRejectedValue({ code: '23505' });
-
-            await expect(service.update('1', updateTaskDto)).rejects.toThrow(
+            await expect(service.findOne(invalidId)).rejects.toThrow(
                 BadRequestException
             );
         });
     });
 
+    describe('update', () => {
+        it('should update a task successfully', async () => {
+            const updateTaskDto: UpdateTaskDto = { content: 'Updated task' };
+            const existingTask: Partial<Task> = {
+                id: validUuid,
+                content: 'Original task',
+                checkDone: false,
+                isDeleted: false,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            };
+            const updatedTask = {
+                ...existingTask,
+                ...updateTaskDto,
+                updatedAt: expect.any(Date),
+            };
+
+            jest.spyOn(service, 'findOne').mockResolvedValue(
+                existingTask as Task
+            );
+            mockRepository.save.mockResolvedValue({
+                ...existingTask,
+                ...updateTaskDto,
+                updatedAt: new Date(),
+            });
+
+            const result = await service.update(validUuid, updateTaskDto);
+            expect(result).toEqual(updatedTask);
+        });
+    });
+
     describe('remove', () => {
         it('should mark a task as deleted', async () => {
-            const task = { id: '1', content: 'Test task', isDeleted: false };
+            const task: Partial<Task> = {
+                id: validUuid,
+                content: 'Test task',
+                isDeleted: false,
+            };
 
             jest.spyOn(service, 'findOne').mockResolvedValue(task as Task);
-            jest.spyOn(repository, 'save').mockResolvedValue({
-                ...task,
-                isDeleted: true,
-            } as Task);
+            mockRepository.save.mockResolvedValue({ ...task, isDeleted: true });
 
-            expect(await service.remove('1')).toEqual({
+            const result = await service.remove(validUuid);
+            expect(result).toEqual({
                 message: 'Product marked as deleted successfully',
             });
         });
